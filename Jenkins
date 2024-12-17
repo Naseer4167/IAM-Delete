@@ -20,7 +20,7 @@ pipeline {
 
         stage('Assume Role in Target AWS Account') {
             steps {
-                withAWS(credentials: 'aws-jenkins-credentials', region: "${AWS_REGION}") {
+                withAWS(credentials: 'aws-credentials', region: "${AWS_REGION}") {
                     script {
                         echo "Assuming role in AWS account: ${params.AWS_ACCOUNT_ID}"
                         
