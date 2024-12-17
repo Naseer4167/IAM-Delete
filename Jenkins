@@ -27,7 +27,7 @@ pipeline {
                         // Assume an administrative role in the target AWS account
                         def assumeRoleOutput = sh(
                             script: """
-                                aws sts assume-role --role-arn arn:aws:iam::${params.AWS_ACCOUNT_ID}:role/AdminRole \
+                                aws sts assume-role --role-arn arn:aws:iam::${params.AWS_ACCOUNT_ID}:role/Jenkins-AdminRole \
                                 --role-session-name JenkinsDeleteIAMSession \
                                 --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
                                 --output text
