@@ -1,0 +1,104 @@
+pipeline {
+    agent any
+    environment {
+        AWS_REGION = 'us-east-1' // Set your AWS region
+    }
+    parameters {
+        string(name: 'IAM_ROLE_NAME', description: 'Name of the IAM role to delete', defaultValue: '')
+        string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID where the role exists', defaultValue: '')
+    }
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    if (!params.IAM_ROLE_NAME || !params.AWS_ACCOUNT_ID) {
+                        error "IAM_ROLE_NAME and AWS_ACCOUNT_ID parameters are required."
+                    }
+                }
+            }
+        }
+
+        stage('Assume Role in Target AWS Account') {
+            steps {
+                withAWS(credentials: 'aws-jenkins-credentials', region: "${AWS_REGION}") {
+                    script {
+                        echo "Assuming role in AWS account: ${params.AWS_ACCOUNT_ID}"
+                        
+                        // Assume an administrative role in the target AWS account
+                        def assumeRoleOutput = sh(
+                            script: """
+                                aws sts assume-role --role-arn arn:aws:iam::${params.AWS_ACCOUNT_ID}:role/AdminRole \
+                                --role-session-name JenkinsDeleteIAMSession \
+                                --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+                                --output text
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        def creds = assumeRoleOutput.split()
+                        env.AWS_ACCESS_KEY_ID = creds[0]
+                        env.AWS_SECRET_ACCESS_KEY = creds[1]
+                        env.AWS_SESSION_TOKEN = creds[2]
+                    }
+                }
+            }
+        }
+
+        stage('Detach Policies and Delete IAM Role') {
+            steps {
+                script {
+                    echo "Starting process to delete IAM role: ${params.IAM_ROLE_NAME}"
+                    
+                    // Detach managed policies
+                    echo "Detaching managed policies..."
+                    def attachedPolicies = sh(
+                        script: """
+                            aws iam list-attached-role-policies --role-name ${params.IAM_ROLE_NAME} \
+                            --query 'AttachedPolicies[].PolicyArn' --output text
+                        """,
+                        returnStdout: true
+                    ).trim()
+
+                    attachedPolicies.split().each { policyArn ->
+                        sh """
+                            aws iam detach-role-policy --role-name ${params.IAM_ROLE_NAME} --policy-arn ${policyArn}
+                        """
+                        echo "Detached policy: ${policyArn}"
+                    }
+
+                    // Delete inline policies
+                    echo "Deleting inline policies..."
+                    def inlinePolicies = sh(
+                        script: """
+                            aws iam list-role-policies --role-name ${params.IAM_ROLE_NAME} \
+                            --query 'PolicyNames' --output text
+                        """,
+                        returnStdout: true
+                    ).trim()
+
+                    inlinePolicies.split().each { policyName ->
+                        sh """
+                            aws iam delete-role-policy --role-name ${params.IAM_ROLE_NAME} --policy-name ${policyName}
+                        """
+                        echo "Deleted inline policy: ${policyName}"
+                    }
+
+                    // Finally, delete the IAM role
+                    echo "Deleting IAM role: ${params.IAM_ROLE_NAME}"
+                    sh """
+                        aws iam delete-role --role-name ${params.IAM_ROLE_NAME}
+                    """
+                    echo "IAM role '${params.IAM_ROLE_NAME}' deleted successfully."
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo "Successfully deleted IAM role and policies for: ${params.IAM_ROLE_NAME}"
+        }
+        failure {
+            echo "Failed to delete IAM role or its policies: ${params.IAM_ROLE_NAME}"
+        }
+    }
+}
