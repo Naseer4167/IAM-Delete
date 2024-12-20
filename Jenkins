@@ -6,6 +6,9 @@ pipeline {
     parameters {
         string(name: 'IAM_ROLE_NAME', description: 'Name of the IAM role to delete', defaultValue: '')
         string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID where the role exists', defaultValue: '')
+        string(name: 'ACCESS_KEY', defaultValue:'', description:'Enter the access key')
+        string(name: 'SECRET_KEY', description: 'Enter the secret key of the role')
+        string(name: 'SESSION_TOKEN', description: 'Enter the Session token of the role')
     }
     stages {
         stage('Setup') {
