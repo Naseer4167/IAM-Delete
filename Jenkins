@@ -87,7 +87,6 @@ pipeline {
                     //delete instance profile
                     echo "Delete Instance Profile: ${params.IAM_PROFILE}"
                     sh """
-                    echo "Detaching instance profile: ${IAM_PROFILE} from role: ${ROLE_NAME}"
                     aws iam remove-role-from-instance-profile \
                         --instance-profile-name ${IAM_PROFILE} \
                         --role-name ${ROLE_NAME} \
