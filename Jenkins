@@ -8,7 +8,7 @@ pipeline {
         string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID where the role exists', defaultValue: '')
         string(name: 'ACCESS_KEY', defaultValue:'', description:'Enter the access key')
         password(name: 'SECRET_KEY', description: 'Enter the secret key of the role')
-        password(name: 'SESSION_TOKEN', description: 'Enter the Session token of the role')
+        (name: 'SESSION_TOKEN', description: 'Enter the Session token of the role')
     }
     stages {
         stage('Setup') {
@@ -21,38 +21,32 @@ pipeline {
             }
         }
 
-        stage('Assume target account role') {
+        stage('Assume Role in Target AWS Account') {
             steps {
-                script {
-                    
-                    def jenkinsAccount = execSH("aws sts get-caller-identity")
-                    print(jenkinsAccount)
-
-                        '''
-                        env.AWS_ACCESS_KEY_ID = params.ACCESS_KEY
-                        env.AWS_SECRET_ACCESS_KEY = params.SECRET_ACCESS_KEY
-                        env.AWS_SESSION_TOKEN = params.SESSION_TOKEN
-                        '''
-
+                withAWS(credentials: 'aws-credentials', region: "${AWS_REGION}") {
+                    script {
+                        echo "Assuming role in AWS account: ${params.AWS_ACCOUNT_ID}"
                         
-                        '''
-                        println "assuming role : RRCC_AWS_EC2OPSL3 on account ${jenkinsAccount.Account}"
-                        newRole = execSH("aws sts assume-role --role-arn arn:aws:iam::866919043554:role/RRCC_AWS_EC2OPSL3 --role-session-name target-assumed-sts --duration-second=3000")
-                        env.AWS_ACCESS_KEY_ID = newRole.Credentials.AccessKeyId
-                        env.AWS_SECRET_ACCESS_KEY = newRole.Credentials.SecretAccessKey
-                        env.AWS_SESSION_TOKEN = newRole.Credentials.SessionToken
-                        '''
-                        '''
-                        println "assuming role : RRSB_AWS_AUTO_ADM on account 866919043554"
-                        newRole = execSH("aws sts assume-role --role-arn arn:aws:iam::866919043554:role/RRSB_AWS_AUTO_ADM --role-session-name target-assumed-sts --duration-second=3000")
-                        env.AWS_ACCESS_KEY_ID = newRole.Credentials.AccessKeyId
-                        env.AWS_SECRET_ACCESS_KEY = newRole.Credentials.SecretAccessKey
-                        env.AWS_SESSION_TOKEN = newRole.Credentials.SessionToken
-                        '''
-                        
-                    }           
-            }  
-           }
+                        // Assume an administrative role in the target AWS account
+                        def assumeRoleOutput = sh(
+                            script: """
+                                aws sts assume-role --role-arn arn:aws:iam::${params.AWS_ACCOUNT_ID}:role/Jenkins-AdminRole \
+                                --role-session-name JenkinsDeleteIAMSession \
+                                --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+                                --output text
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        def creds = assumeRoleOutput.split()
+                        env.AWS_ACCESS_KEY_ID = creds[0]
+                        env.AWS_SECRET_ACCESS_KEY = creds[1]
+                        env.AWS_SESSION_TOKEN = creds[2]
+                    }
+                }
+            }
+        }
+
         stage('Detach Policies and Delete IAM Role') {
             steps {
                 script {
