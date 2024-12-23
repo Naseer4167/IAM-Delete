@@ -91,7 +91,6 @@ pipeline {
                         --instance-profile-name ${IAM_PROFILE} \
                         --role-name ${ROLE_NAME} \
                         --region ${AWS_REGION}
-                    echo "Instance profile detached successfully."
                     """
 
                     // Finally, delete the IAM role
