@@ -8,7 +8,7 @@ pipeline {
         string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID where the role exists', defaultValue: '')
         string(name: 'ACCESS_KEY', defaultValue:'', description:'Enter the access key')
         password(name: 'SECRET_KEY', description: 'Enter the secret key of the role')
-        (name: 'SESSION_TOKEN', description: 'Enter the Session token of the role')
+        password(name: 'SESSION_TOKEN', description: 'Enter the Session token of the role')
     }
     stages {
         stage('Setup') {
