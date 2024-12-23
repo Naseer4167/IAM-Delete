@@ -6,7 +6,7 @@ pipeline {
     parameters {
         string(name: 'IAM_ROLE_NAME', description: 'Name of the IAM role to delete', defaultValue: '')
         string(name: 'AWS_ACCOUNT_ID', description: 'AWS Account ID where the role exists', defaultValue: '')
-        string(name: 'INSTANCE_PROFILE_NAME', defaultValue:'', description:'Enter the INSTANCE_PROFILE_NAME')
+        string(name: 'IAM_PROFILE', description: 'AWS Instance Profile', defaultValue: '')
     }
     stages {
         stage('Setup') {
@@ -83,23 +83,17 @@ pipeline {
                         """
                         echo "Deleted inline policy: ${policyName}"
                     }
-                     stages {
-        stage('Remove Instance Profile') {
-            steps {
-                script {
 
-                    // Detach the instance profile from the role
+                    //delete instance profile
+                    echo "Delete Instance Profile: ${params.IAM_PROFILE}"
                     sh """
-                    echo "Detaching instance profile: ${INSTANCE_PROFILE_NAME} from role: ${ROLE_NAME}"
+                    echo "Detaching instance profile: ${IAM_PROFILE} from role: ${ROLE_NAME}"
                     aws iam remove-role-from-instance-profile \
-                        --instance-profile-name ${INSTANCE_PROFILE_NAME} \
+                        --instance-profile-name ${IAM_PROFILE} \
                         --role-name ${ROLE_NAME} \
                         --region ${AWS_REGION}
                     echo "Instance profile detached successfully."
                     """
-                }
-            }
-        }
 
                     // Finally, delete the IAM role
                     echo "Deleting IAM role: ${params.IAM_ROLE_NAME}"
