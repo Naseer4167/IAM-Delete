@@ -88,8 +88,8 @@ pipeline {
                     echo "Delete Instance Profile: ${params.IAM_PROFILE}"
                     sh """
                     aws iam remove-role-from-instance-profile \
-                        --instance-profile-name ${IAM_PROFILE} \
-                        --role-name ${ROLE_NAME} \
+                        --instance-profile-name ${params.IAM_PROFILE} \
+                        --role-name ${params.IAM_ROLE_NAME} \
                         --region ${AWS_REGION}
                     """
 
