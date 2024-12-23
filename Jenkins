@@ -87,8 +87,6 @@ pipeline {
         stage('Remove Instance Profile') {
             steps {
                 script {
-                    // Ensure AWS CLI is installed
-                    sh 'aws --version'
 
                     // Detach the instance profile from the role
                     sh """
@@ -102,7 +100,6 @@ pipeline {
                 }
             }
         }
-    }
 
                     // Finally, delete the IAM role
                     echo "Deleting IAM role: ${params.IAM_ROLE_NAME}"
